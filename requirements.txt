@@ -3,4 +3,3 @@ openai
 anthropic
 google-generativeai
 python-dotenv
-sqlite3
