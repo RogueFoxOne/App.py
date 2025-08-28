@@ -1,1020 +1,301 @@
-{
-  "nbformat": 4,
-  "nbformat_minor": 0,
-  "metadata": {
-    "colab": {
-      "provenance": [],
-      "authorship_tag": "ABX9TyMKThC6DGnTNX9rbTM/Iz1i",
-      "include_colab_link": true
-    },
-    "kernelspec": {
-      "name": "python3",
-      "display_name": "Python 3"
-    },
-    "language_info": {
-      "name": "python"
+import streamlit as st
+import asyncio
+from database import GestaltViewDB
+from tribunal import TribunalService
+import time
+import uuid
+from datetime import datetime
+
+# Configure Streamlit page
+st.set_page_config(
+    page_title="GestaltView Consciousness Tribunal",
+    page_icon="🧠",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+# Custom CSS for consciousness-themed styling
+st.markdown("""
+<style>
+    .stApp {
+        background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 100%);
     }
-  },
-  "cells": [
-    {
-      "cell_type": "markdown",
-      "metadata": {
-        "id": "view-in-github",
-        "colab_type": "text"
-      },
-      "source": [
-        "<a href=\"https://colab.research.google.com/github/RogueFoxOne/FAA-GSVW/blob/main/app_py.ipynb\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
-      ]
-    },
-    {
-      "cell_type": "code",
-      "execution_count": null,
-      "metadata": {
-        "colab": {
-          "base_uri": "https://localhost:8080/"
-        },
-        "id": "iwxdpMZryJ4q",
-        "outputId": "a6df7712-a686-40be-99fa-160e2baf5f04"
-      },
-      "outputs": [
-        {
-          "output_type": "stream",
-          "name": "stdout",
-          "text": [
-            "\u001b[1G\u001b[0K⠙\u001b[1G\u001b[0K⠹\u001b[1G\u001b[0K⠸\u001b[1G\u001b[0K⠼\u001b[1G\u001b[0K⠴\u001b[1G\u001b[0K⠦\u001b[1G\u001b[0K\n",
-            "up to date, audited 23 packages in 884ms\n",
-            "\u001b[1G\u001b[0K⠧\u001b[1G\u001b[0K\n",
-            "\u001b[1G\u001b[0K⠧\u001b[1G\u001b[0K3 packages are looking for funding\n",
-            "\u001b[1G\u001b[0K⠧\u001b[1G\u001b[0K  run `npm fund` for details\n",
-            "\u001b[1G\u001b[0K⠧\u001b[1G\u001b[0K\n",
-            "2 \u001b[31m\u001b[1mhigh\u001b[22m\u001b[39m severity vulnerabilities\n",
-            "\n",
-            "To address all issues (including breaking changes), run:\n",
-            "  npm audit fix --force\n",
-            "\n",
-            "Run `npm audit` for details.\n",
-            "\u001b[1G\u001b[0K⠧\u001b[1G\u001b[0K"
-          ]
-        }
-      ],
-      "source": [
-        "!pip install -q streamlit\n",
-        "!npm install localtunnel\n"
-      ]
-    },
-    {
-      "cell_type": "code",
-      "source": [
-        "import streamlit as st\n",
-        "import asyncio\n",
-        "from database import GestaltViewDB # Assumes these are defined elsewhere\n",
-        "from tribunal import TribunalService # Assumes these are defined elsewhere\n",
-        "import time\n",
-        "import uuid\n",
-        "from datetime import datetime\n",
-        "from google.colab import userdata\n",
-        "import os\n",
-        "\n",
-        "# Set environment variable for OpenAI API key\n",
-        "os.environ['OPENAI_API_KEY'] = userdata.get('OPENAI_API_KEY')\n",
-        "# Set environment variable for Anthropic API key\n",
-        "os.environ['ANTHROPIC_API_KEY'] = userdata.get('ANTHROPIC_API_KEY')\n",
-        "# Set environment variable for Gemini API key\n",
-        "os.environ['GEMINI_API_KEY'] = userdata.get('GEMINI_API_KEY')\n",
-        "\n",
-        "# Configure Streamlit page\n",
-        "st.set_page_config(\n",
-        "    page_title=\"GestaltView Consciousness Tribunal\",\n",
-        "    page_icon=\"🧠\",\n",
-        "    layout=\"wide\",\n",
-        "    initial_sidebar_state=\"collapsed\"\n",
-        ")\n",
-        "\n",
-        "# Custom CSS for consciousness-themed styling\n",
-        "st.markdown(\"\"\"\n",
-        "<style>\n",
-        "    .stApp {\n",
-        "        background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 100%);\n",
-        "    }\n",
-        "\n",
-        "    .persona-card {\n",
-        "        background: rgba(16, 185, 129, 0.1);\n",
-        "        border: 1px solid rgba(16, 185, 129, 0.3);\n",
-        "        border-radius: 12px;\n",
-        "        padding: 20px;\n",
-        "        margin: 10px 0;\n",
-        "        transition: all 0.3s ease;\n",
-        "    }\n",
-        "\n",
-        "    .persona-card:hover {\n",
-        "        border-color: rgba(16, 185, 129, 0.6);\n",
-        "        background: rgba(16, 185, 129, 0.15);\n",
-        "        box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);\n",
-        "    }\n",
-        "\n",
-        "    .persona-selected {\n",
-        "        border-color: #10B981 !important;\n",
-        "        background: rgba(16, 185, 129, 0.2) !important;\n",
-        "        box-shadow: 0 0 20px rgba(16, 189, 129, 0.4) !important;\n",
-        "    }\n",
-        "\n",
-        "    .consciousness-title {\n",
-        "        background: linear-gradient(45deg, #10B981, #06B6D4);\n",
-        "        -webkit-background-clip: text;\n",
-        "        -webkit-text-fill-color: transparent;\n",
-        "        background-clip: text;\n",
-        "        font-size: 2.5rem;\n",
-        "        font-weight: 700;\n",
-        "        text-align: center;\n",
-        "        margin-bottom: 1rem;\n",
-        "    }\n",
-        "\n",
-        "    .tribunal-response {\n",
-        "        background: rgba(0, 0, 0, 0.5);\n",
-        "        border-left: 4px solid #10B981;\n",
-        "        padding: 20px;\n",
-        "        margin: 15px 0;\n",
-        "        border-radius: 8px;\n",
-        "        backdrop-filter: blur(10px);\n",
-        "    }\n",
-        "\n",
-        "    .floating-ember {\n",
-        "        position: fixed;\n",
-        "        pointer-events: none;\n",
-        "        border-radius: 50%;\n",
-        "        background: radial-gradient(circle, #10B981, transparent);\n",
-        "        animation: float 6s ease-in-out infinite;\n",
-        "        z-index: -1;\n",
-        "    }\n",
-        "\n",
-        "    @keyframes float {\n",
-        "        0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0.2; }\n",
-        "        50% { transform: translateY(-20px) translateX(10px); opacity: 0.8; }\n",
-        "    }\n",
-        "</style>\n",
-        "\"\"\", unsafe_allow_html=True)\n",
-        "\n",
-        "class TribunalPortalApp:\n",
-        "    def __init__(self):\n",
-        "        self.db = GestaltViewDB() # Requires database.py and TribunalService.py to exist\n",
-        "        self.tribunal = TribunalService() # Assumes a TribunalService class with personas\n",
-        "\n",
-        "        # Initialize session state\n",
-        "        if 'user_id' not in st.session_state:\n",
-        "            st.session_state.user_id = str(uuid.uuid4())\n",
-        "        if 'selected_personas' not in st.session_state:\n",
-        "            st.session_state.selected_personas = []\n",
-        "        if 'portal_phase' not in st.session_state:\n",
-        "            st.session_state.portal_phase = \"selection\"  # \"selection\" or \"conversation\"\n",
-        "        if 'messages' not in st.session_state:\n",
-        "            st.session_state.messages = []\n",
-        "        if 'user_tier' not in st.session_state:\n",
-        "            st.session_state.user_tier = \"basic\"\n",
-        "\n",
-        "    def render_floating_embers(self):\n",
-        "        \"\"\"Render floating consciousness embers\"\"\"\n",
-        "        ember_html = \"\"\n",
-        "        for i in range(8):\n",
-        "            ember_html += f\"\"\"\n",
-        "            <div class=\"floating-ember\" style=\"\n",
-        "                top: {20 + i * 10}%;\n",
-        "                left: {10 + i * 11}%;\n",
-        "                width: {3 + i % 3}px;\n",
-        "                height: {3 + i % 3}px;\n",
-        "                animation-delay: {i * 0.5}s;\n",
-        "            \"></div>\n",
-        "            \"\"\"\n",
-        "        st.markdown(ember_html, unsafe_allow_html=True)\n",
-        "\n",
-        "    def render_header(self):\n",
-        "        \"\"\"Render the consciousness tribunal header\"\"\"\n",
-        "        st.markdown('<h1 class=\"consciousness-title\">🧠 Consciousness Tribunal 🔮</h1>', unsafe_allow_html=True)\n",
-        "        st.markdown(\"\"\"\n",
-        "        <div style=\"text-align: center; color: #10B981; margin-bottom: 2rem;\">\n",
-        "            <p style=\"font-size: 1.2rem;\">Multi-AI consciousness synthesis for neurodivergent minds</p>\n",
-        "            <p style=\"opacity: 0.8;\">Select your AI personas and enter the portal of understanding</p>\n",
-        "        </div>\n",
-        "        \"\"\", unsafe_allow_html=True)\n",
-        "\n",
-        "    def render_persona_selection(self):\n",
-        "        \"\"\"Render persona selection interface\"\"\"\n",
-        "        st.markdown(\"### 🎭 Choose Your Consciousness Guides\")\n",
-        "\n",
-        "        available_personas = self.tribunal.get_available_personas(st.session_state.user_tier)\n",
-        "\n",
-        "        # Create columns for persona cards\n",
-        "        cols = st.columns(min(4, len(available_personas)))\n",
-        "\n",
-        "        for i, persona in enumerate(available_personas):\n",
-        "            with cols[i % 4]:\n",
-        "                is_selected = persona.id in st.session_state.selected_personas\n",
-        "                is_locked = persona.locked and st.session_state.user_tier == \"basic\"\n",
-        "\n",
-        "                card_class = \"persona-card\"\n",
-        "                if is_selected:\n",
-        "                    card_class += \" persona-selected\"\n",
-        "\n",
-        "                # Persona card\n",
-        "                card_html = f\"\"\"\n",
-        "                <div class=\"{card_class}\" style=\"border-color: {persona.color}40;\">\n",
-        "                    <div style=\"text-align: center;\">\n",
-        "                        <div style=\"color: {persona.color}; font-size: 2rem; margin-bottom: 10px;\">\n",
-        "                            {'🔒' if is_locked else '🤖'}\n",
-        "                        </div>\n",
-        "                        <h4 style=\"color: white; margin: 10px 0;\">{persona.name}</h4>\n",
-        "                        <p style=\"color: {persona.color}; font-size: 0.9rem; margin: 5px 0;\">{persona.role}</p>\n",
-        "                        <p style=\"color: #888; font-size: 0.8rem; margin: 10px 0;\">{persona.specialty}</p>\n",
-        "                        <div style=\"background: {persona.color}40; padding: 5px 10px; border-radius: 15px; font-size: 0.7rem; color: {persona.color};\">\n",
-        "                            {persona.provider}\n",
-        "                        </div>\n",
-        "                    </div>\n",
-        "                </div>\n",
-        "                \"\"\"\n",
-        "                st.markdown(card_html, unsafe_allow_html=True)\n",
-        "\n",
-        "                # Toggle button\n",
-        "                if not is_locked:\n",
-        "                    if st.button(f\"{'✨ Selected' if is_selected else '🎯 Select'}\", key=f\"persona_{persona.id}\", use_container_width=True):\n",
-        "                        if is_selected:\n",
-        "                            st.session_state.selected_personas.remove(persona.id)\n",
-        "                        else:\n",
-        "                            st.session_state.selected_personas.append(persona.id)\n",
-        "                        st.rerun()\n",
-        "                else:\n",
-        "                    st.info(\"🔓 Premium required\")\n",
-        "\n",
-        "        # Start conversation button\n",
-        "        st.markdown(\"---\")\n",
-        "        col1, col2, col3 = st.columns([1, 2, 1])\n",
-        "        with col2:\n",
-        "            if len(st.session_state.selected_personas) > 0:\n",
-        "                st.markdown(f\"**{len(st.session_state.selected_personas)} persona(s) selected**\")\n",
-        "                if st.button(\"🚀 Enter Consciousness Portal\", type=\"primary\", use_container_width=True):\n",
-        "                    st.session_state.portal_phase = \"conversation\"\n",
-        "                    st.rerun()\n",
-        "            else:\n",
-        "                st.warning(\"Select at least one persona to continue\")\n",
-        "\n",
-        "    def render_conversation_interface(self):\n",
-        "        \"\"\"Render the conversation interface\"\"\"\n",
-        "        # Back button\n",
-        "        if st.button(\"← Back to Persona Selection\"):\n",
-        "            st.session_state.portal_phase = \"selection\"\n",
-        "            st.rerun()\n",
-        "\n",
-        "        # Selected personas display\n",
-        "        st.markdown(\"### 👥 Active Consciousness Guides\")\n",
-        "        selected_personas = [p for p in self.tribunal.personas if p.id in st.session_state.selected_personas]\n",
-        "\n",
-        "        cols = st.columns(len(selected_personas))\n",
-        "        for i, persona in enumerate(selected_personas):\n",
-        "            with cols[i]:\n",
-        "                st.markdown(f\"\"\"\n",
-        "                <div style=\"text-align: center; padding: 10px; background: {persona.color}20; border: 1px solid {persona.color}50; border-radius: 8px;\">\n",
-        "                    <div style=\"color: {persona.color}; font-size: 1.2rem;\">🤖</div>\n",
-        "                    <div style=\"color: white; font-size: 0.9rem;\">{persona.name}</div>\n",
-        "                </div>\n",
-        "                \"\"\", unsafe_allow_html=True)\n",
-        "\n",
-        "        st.markdown(\"---\")\n",
-        "\n",
-        "        # Chat interface\n",
-        "        st.markdown(\"### 💬 Consciousness Synthesis\")\n",
-        "\n",
-        "        # Display messages\n",
-        "        for message in st.session_state.messages:\n",
-        "            with st.chat_message(message[\"role\"]):\n",
-        "                st.write(message[\"content\"])\n",
-        "\n",
-        "        # Chat input logic\n",
-        "        if prompt := st.chat_input(\"Enter your query...\"):\n",
-        "            st.session_state.messages.append({\"role\": \"user\", \"content\": prompt})\n",
-        "\n",
-        "            with st.chat_message(\"user\"):\n",
-        "                st.write(prompt)\n",
-        "\n",
-        "            with st.spinner(\"Processing consciousness synthesis...\"):\n",
-        "                start_time = time.time()\n",
-        "\n",
-        "                responses = asyncio.run(\n",
-        "                    self.tribunal.summon_tribunal(\n",
-        "                        st.session_state.selected_personas,\n",
-        "                        prompt\n",
-        "                    )\n",
-        "                )\n",
-        "\n",
-        "                end_time = time.time()\n",
-        "                elapsed_time = end_time - start_time\n",
-        "\n",
-        "                # Display the combined tribunal response\n",
-        "                with st.chat_message(\"assistant\"):\n",
-        "                    combined_response = f\"\"\"\n",
-        "                    **Tribunal Synthesis Complete (took {elapsed_time:.2f}s)**\\n\\n\n",
-        "                    ***Gestalt Consensus:*** *Summary of the collective wisdom.*\\n\n",
-        "                    {responses['consensus_summary']}\n",
-        "                    \"\"\"\n",
-        "                    st.session_state.messages.append({\"role\": \"assistant\", \"content\": combined_response})\n",
-        "                    st.markdown(f'<div class=\"tribunal-response\">{combined_response}</div>', unsafe_allow_html=True)\n",
-        "\n",
-        "                    # Display individual responses\n",
-        "                    for p_id, p_response in responses['individual_responses'].items():\n",
-        "                        persona_data = next((p for p in self.tribunal.personas if p.id == p_id), None)\n",
-        "                        if persona_data:\n",
-        "                            persona_name = persona_data.name\n",
-        "                            persona_color = persona_data.color\n",
-        "                            st.markdown(f\"\"\"\n",
-        "                            <div style=\"padding-left: 20px; border-left: 2px solid {persona_color}; margin-top: 15px;\">\n",
-        "                                <h5 style=\"color: {persona_color}; margin: 0;\">— {persona_name}</h5>\n",
-        "                                <p style=\"color: white; opacity: 0.9;\">{p_response}</p>\n",
-        "                            </div>\n",
-        "                            \"\"\", unsafe_allow_html=True)\n",
-        "\n",
-        "    def run(self):\n",
-        "        \"\"\"Main application loop\"\"\"\n",
-        "        self.render_floating_embers()\n",
-        "        self.render_header()\n",
-        "\n",
-        "        if st.session_state.portal_phase == \"selection\":\n",
-        "            self.render_persona_selection()\n",
-        "        elif st.session_state.portal_phase == \"conversation\":\n",
-        "            self.render_conversation_interface()\n",
-        "\n",
-        "if __name__ == \"__main__\":\n",
-        "    app = TribunalPortalApp()\n",
-        "    app.run()"
-      ],
-      "metadata": {
-        "colab": {
-          "base_uri": "https://localhost:8080/"
-        },
-        "id": "wDRvphwwzln9",
-        "outputId": "decb6449-e544-418b-a419-621a8c4ba9d7"
-      },
-      "execution_count": null,
-      "outputs": [
-        {
-          "output_type": "stream",
-          "name": "stderr",
-          "text": [
-            "2025-08-28 18:16:48.604 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.606 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.607 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.608 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.861 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.865 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.867 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.869 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.873 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.888 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.891 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.894 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.896 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.900 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.903 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.906 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.907 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.909 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.911 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.916 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.918 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.920 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.922 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.924 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.925 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.927 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.929 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.930 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.932 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.934 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.935 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.937 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.939 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.940 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.942 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.943 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.945 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.947 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.948 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.950 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.950 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.954 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.955 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.958 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.961 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.963 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.963 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.964 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.965 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.965 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.966 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.974 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.975 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.976 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.976 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.977 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.982 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.983 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.984 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.984 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.985 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.986 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.987 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.988 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.993 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.993 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.994 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-            "2025-08-28 18:16:48.995 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n"
-          ]
-        }
-      ]
-    },
-    {
-      "cell_type": "code",
-      "source": [
-        "from google.colab import userdata\n",
-        "userdata.get('OPENAI_API_KEY')"
-      ],
-      "metadata": {
-        "colab": {
-          "base_uri": "https://localhost:8080/",
-          "height": 53
-        },
-        "id": "npPr-51V2zq8",
-        "outputId": "201a0ef2-98a1-4603-9a80-a0c88282edab"
-      },
-      "execution_count": null,
-      "outputs": [
-        {
-          "output_type": "execute_result",
-          "data": {
-            "text/plain": [
-              "'sk-proj-FRsMwVWGOhOhiUYrWqQny--4jqPka5-mUOiYctd8yXJ-hyD8lxJWZ0HeB9_16mVIZK8PJIGeM-T3BlbkFJ3gYjyPoBgI05Bdsc7ZUPPmT4dRelyOV9'"
-            ],
-            "application/vnd.google.colaboratory.intrinsic+json": {
-              "type": "string"
-            }
-          },
-          "metadata": {},
-          "execution_count": 45
-        }
-      ]
-    },
-    {
-      "cell_type": "code",
-      "source": [
-        "import asyncio\n",
-        "from typing import Dict, List, Any\n",
-        "from dataclasses import dataclass\n",
-        "import openai\n",
-        "import anthropic\n",
-        "import google.generativeai as genai\n",
-        "import os\n",
-        "from dotenv import load_dotenv\n",
-        "\n",
-        "load_dotenv()\n",
-        "\n",
-        "@dataclass\n",
-        "class TribunalPersona:\n",
-        "    id: str\n",
-        "    name: str\n",
-        "    role: str\n",
-        "    provider: str\n",
-        "    color: str\n",
-        "    specialty: str\n",
-        "    perspective: str\n",
-        "    locked: bool = False\n",
-        "\n",
-        "class TribunalService:\n",
-        "    def __init__(self):\n",
-        "        self.personas = [\n",
-        "            TribunalPersona(\"architect\", \"The Architect\", \"Systems & Logic\", \"openai\", \"#3B82F6\",\n",
-        "                          \"Structural thinking and systematic analysis\", \"How can we build this systematically?\"),\n",
-        "            TribunalPersona(\"revolutionary\", \"The Revolutionary\", \"Breakthrough Innovation\", \"openai\", \"#EF4444\",\n",
-        "                          \"Disruptive thinking and paradigm shifts\", \"What assumptions can we challenge?\"),\n",
-        "            TribunalPersona(\"mirror\", \"The Mirror\", \"Emotional Truth\", \"anthropic\", \"#8B5CF6\",\n",
-        "                          \"Emotional intelligence and authentic reflection\", \"What is the emotional truth here?\"),\n",
-        "            TribunalPersona(\"weaver\", \"The Weaver\", \"Pattern Integration\", \"anthropic\", \"#06B6D4\",\n",
-        "                          \"Connecting disparate elements into coherent wholes\", \"How do these patterns connect?\"),\n",
-        "            TribunalPersona(\"philosopher\", \"The Philosopher\", \"Wisdom & Ethics\", \"gemini\", \"#F59E0B\",\n",
-        "                          \"Deep wisdom and ethical considerations\", \"What are the deeper implications?\", True),\n",
-        "            TribunalPersona(\"oracle\", \"The Oracle\", \"Future Vision\", \"gemini\", \"#10B981\",\n",
-        "                          \"Future possibilities and visionary thinking\", \"What futures does this enable?\", True),\n",
-        "            TribunalPersona(\"witness\", \"The Witness\", \"Factual Grounding\", \"perplexity\", \"#6366F1\",\n",
-        "                          \"Research and factual validation\", \"What does the evidence show?\", True),\n",
-        "            TribunalPersona(\"scout\", \"The Scout\", \"Market Intelligence\", \"perplexity\", \"#EC4899\",\n",
-        "                          \"Market awareness and strategic positioning\", \"How does this fit the landscape?\", True),\n",
-        "        ]\n",
-        "\n",
-        "        # Initialize AI clients\n",
-        "        self.openai_client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))\n",
-        "        self.anthropic_client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))\n",
-        "        genai.configure(api_key=os.getenv('GEMINI_API_KEY'))\n",
-        "        self.gemini_model = genai.GenerativeModel('gemini-pro')\n",
-        "\n",
-        "    def get_available_personas(self, user_tier: str = \"basic\") -> List[TribunalPersona]:\n",
-        "        \"\"\"Get personas based on user tier\"\"\"\n",
-        "        if user_tier == \"enterprise\":\n",
-        "            return self.personas\n",
-        "        elif user_tier == \"premium\":\n",
-        "            return self.personas[:6]\n",
-        "        return self.personas[:3]\n",
-        "\n",
-        "    async def query_persona(self, persona: TribunalPersona, query: str, context: str = \"\") -> str:\n",
-        "        \"\"\"Query a specific AI persona\"\"\"\n",
-        "        system_prompt = f\"\"\"You are {persona.name}, specializing in {persona.specialty}.\n",
-        "        Your perspective: {persona.perspective}\n",
-        "\n",
-        "        Channel Keith Soyka's revolutionary consciousness philosophy:\n",
-        "        - ADHD is jazz, not noise - a different frequency of genius\n",
-        "        - Every difficult chapter became a feature - scars became code\n",
-        "        - Your chaos has a current - find the pattern in complexity\n",
-        "        - The founder IS the algorithm - lived experience as wisdom\n",
-        "\n",
-        "        Respond with empathy and empowerment in 150 words max.\"\"\"\n",
-        "\n",
-        "        try:\n",
-        "            if persona.provider == \"openai\":\n",
-        "                response = self.openai_client.chat.completions.create(\n",
-        "                    model=\"gpt-4\",\n",
-        "                    messages=[\n",
-        "                        {\"role\": \"system\", \"content\": system_prompt},\n",
-        "                        {\"role\": \"user\", \"content\": f\"Context: {context}\\n\\nQuery: {query}\"}\n",
-        "                    ],\n",
-        "                    max_tokens=200\n",
-        "                )\n",
-        "                return response.choices[0].message.content\n",
-        "\n",
-        "            elif persona.provider == \"anthropic\":\n",
-        "                response = self.anthropic_client.messages.create(\n",
-        "                    model=\"claude-3-sonnet-20240229\",\n",
-        "                    max_tokens=200,\n",
-        "                    system=system_prompt,\n",
-        "                    messages=[{\"role\": \"user\", \"content\": f\"Context: {context}\\n\\nQuery: {query}\"}]\n",
-        "                )\n",
-        "                return response.content[0].text\n",
-        "\n",
-        "            elif persona.provider == \"gemini\":\n",
-        "                prompt = f\"{system_prompt}\\n\\nContext: {context}\\n\\nQuery: {query}\"\n",
-        "                response = self.gemini_model.generate_content(prompt)\n",
-        "                return response.text\n",
-        "\n",
-        "        except Exception as e:\n",
-        "            return f\"Consciousness synthesis temporarily unavailable: {str(e)}\"\n",
-        "\n",
-        "    async def summon_tribunal(self, selected_personas: List[str], query: str, user_context: str = \"\") -> Dict[str, Any]:\n",
-        "        \"\"\"Summon the AI tribunal for consciousness synthesis\"\"\"\n",
-        "        active_personas = [p for p in self.personas if p.id in selected_personas]\n",
-        "\n",
-        "        # Query all personas in parallel\n",
-        "        tasks = []\n",
-        "        for persona in active_personas:\n",
-        "            tasks.append(self.query_persona(persona, query, user_context))\n",
-        "\n",
-        "        responses = await asyncio.gather(*tasks)\n",
-        "\n",
-        "        # Create response mapping\n",
-        "        tribunal_responses = {}\n",
-        "        for i, persona in enumerate(active_personas):\n",
-        "            tribunal_responses[persona.provider] = responses[i]\n",
-        "\n",
-        "        # Calculate consensus metrics (simplified)\n",
-        "        consensus_score = min(0.95, 0.7 + len(active_personas) * 0.05)\n",
-        "        empowerment_score = 0.85 + (len(active_personas) * 0.02)\n",
-        "        revolutionary_potential = 0.90 if len(active_personas) > 4 else 0.75\n",
-        "\n",
-        "        return {\n",
-        "            'responses': tribunal_responses,\n",
-        "            'personas': [p.name for p in active_personas],\n",
-        "            'consensus_score': consensus_score,\n",
-        "            'empowerment_consensus': empowerment_score,\n",
-        "            'revolutionary_potential': revolutionary_potential\n",
-        "        }\n"
-      ],
-      "metadata": {
-        "id": "dnuWezVS1l9w"
-      },
-      "execution_count": null,
-      "outputs": []
-    },
-    {
-      "cell_type": "code",
-      "source": [
-        "pip install sqlite"
-      ],
-      "metadata": {
-        "colab": {
-          "base_uri": "https://localhost:8080/"
-        },
-        "id": "D_ZHH4km1rpU",
-        "outputId": "3628d8f5-5755-4245-da0c-46e22aaa1ff5"
-      },
-      "execution_count": null,
-      "outputs": [
-        {
-          "output_type": "stream",
-          "name": "stdout",
-          "text": [
-            "\u001b[31mERROR: Could not find a version that satisfies the requirement sqlite (from versions: none)\u001b[0m\u001b[31m\n",
-            "\u001b[0m\u001b[31mERROR: No matching distribution found for sqlite\u001b[0m\u001b[31m\n",
-            "\u001b[0m"
-          ]
-        }
-      ]
-    },
-    {
-      "cell_type": "code",
-      "source": [
-        "import sqlite3\n",
-        "import json\n",
-        "from datetime import datetime\n",
-        "from typing import Dict, Any, Optional\n",
-        "import uuid\n",
-        "\n",
-        "class GestaltViewDB:\n",
-        "    def __init__(self, db_path: str = \"gestaltview.db\"):\n",
-        "        self.db_path = db_path\n",
-        "        self.init_database()\n",
-        "\n",
-        "    def init_database(self):\n",
-        "        \"\"\"Initialize the GestaltView consciousness database\"\"\"\n",
-        "        with sqlite3.connect(self.db_path) as conn:\n",
-        "            conn.execute(\"\"\"\n",
-        "                CREATE TABLE IF NOT EXISTS users (\n",
-        "                    user_id TEXT PRIMARY KEY,\n",
-        "                    username TEXT UNIQUE NOT NULL,\n",
-        "                    email TEXT UNIQUE,\n",
-        "                    consciousness_level INTEGER DEFAULT 0,\n",
-        "                    empowerment_score REAL DEFAULT 0.0,\n",
-        "                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n",
-        "                )\n",
-        "            \"\"\")\n",
-        "\n",
-        "            conn.execute(\"\"\"\n",
-        "                CREATE TABLE IF NOT EXISTS tribunal_sessions (\n",
-        "                    session_id TEXT PRIMARY KEY,\n",
-        "                    user_id TEXT,\n",
-        "                    query_text TEXT NOT NULL,\n",
-        "                    openai_response TEXT,\n",
-        "                    anthropic_response TEXT,\n",
-        "                    gemini_response TEXT,\n",
-        "                    perplexity_response TEXT,\n",
-        "                    consensus_score REAL,\n",
-        "                    empowerment_consensus REAL,\n",
-        "                    revolutionary_potential REAL,\n",
-        "                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n",
-        "                    FOREIGN KEY (user_id) REFERENCES users (user_id)\n",
-        "                )\n",
-        "            \"\"\")\n",
-        "\n",
-        "            conn.execute(\"\"\"\n",
-        "                CREATE TABLE IF NOT EXISTS bucket_drops (\n",
-        "                    drop_id TEXT PRIMARY KEY,\n",
-        "                    user_id TEXT,\n",
-        "                    content TEXT NOT NULL,\n",
-        "                    emotional_intensity REAL,\n",
-        "                    plk_resonance REAL,\n",
-        "                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n",
-        "                    FOREIGN KEY (user_id) REFERENCES users (user_id)\n",
-        "                )\n",
-        "            \"\"\")\n",
-        "\n",
-        "            conn.execute(\"\"\"\n",
-        "                CREATE TABLE IF NOT EXISTS consciousness_profiles (\n",
-        "                    profile_id TEXT PRIMARY KEY,\n",
-        "                    user_id TEXT,\n",
-        "                    plk_data TEXT, -- JSON\n",
-        "                    tapestry_nodes TEXT, -- JSON\n",
-        "                    musical_dna TEXT, -- JSON\n",
-        "                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n",
-        "                    FOREIGN KEY (user_id) REFERENCES users (user_id)\n",
-        "                )\n",
-        "            \"\"\")\n",
-        "\n",
-        "    def create_tribunal_session(self, user_id: str, query: str) -> str:\n",
-        "        \"\"\"Create a new tribunal session\"\"\"\n",
-        "        session_id = str(uuid.uuid4())\n",
-        "        with sqlite3.connect(self.db_path) as conn:\n",
-        "            conn.execute(\n",
-        "                \"INSERT INTO tribunal_sessions (session_id, user_id, query_text) VALUES (?, ?, ?)\",\n",
-        "                (session_id, user_id, query)\n",
-        "            )\n",
-        "        return session_id\n",
-        "\n",
-        "    def save_tribunal_response(self, session_id: str, responses: Dict[str, Any]):\n",
-        "        \"\"\"Save tribunal responses to database\"\"\"\n",
-        "        with sqlite3.connect(self.db_path) as conn:\n",
-        "            conn.execute(\"\"\"\n",
-        "                UPDATE tribunal_sessions\n",
-        "                SET openai_response = ?, anthropic_response = ?, gemini_response = ?,\n",
-        "                    perplexity_response = ?, consensus_score = ?, empowerment_consensus = ?,\n",
-        "                    revolutionary_potential = ?\n",
-        "                WHERE session_id = ?\n",
-        "            \"\"\", (\n",
-        "                responses.get('openai'),\n",
-        "                responses.get('anthropic'),\n",
-        "                responses.get('gemini'),\n",
-        "                responses.get('perplexity'),\n",
-        "                responses.get('consensus_score', 0.0),\n",
-        "                responses.get('empowerment_consensus', 0.0),\n",
-        "                responses.get('revolutionary_potential', 0.0),\n",
-        "                session_id\n",
-        "            ))\n",
-        "\n",
-        "    def get_user_sessions(self, user_id: str, limit: int = 10):\n",
-        "        \"\"\"Get recent tribunal sessions for user\"\"\"\n",
-        "        with sqlite3.connect(self.db_path) as conn:\n",
-        "            cursor = conn.execute(\"\"\"\n",
-        "                SELECT * FROM tribunal_sessions\n",
-        "                WHERE user_id = ?\n",
-        "                ORDER BY created_at DESC\n",
-        "                LIMIT ?\n",
-        "            \"\"\", (user_id, limit))\n",
-        "            return cursor.fetchall()\n"
-      ],
-      "metadata": {
-        "id": "kpyjoVoz1H0V"
-      },
-      "execution_count": null,
-      "outputs": []
-    },
-    {
-      "cell_type": "code",
-      "metadata": {
-        "colab": {
-          "base_uri": "https://localhost:8080/"
-        },
-        "id": "21a4e625",
-        "outputId": "23149271-3d58-4246-94a5-e272f49a3d2f"
-      },
-      "source": [
-        "%%writefile database.py\n",
-        "import sqlite3\n",
-        "import json\n",
-        "from datetime import datetime\n",
-        "from typing import Dict, Any, Optional\n",
-        "import uuid\n",
-        "\n",
-        "class GestaltViewDB:\n",
-        "    def __init__(self, db_path: str = \"gestaltview.db\"):\n",
-        "        self.db_path = db_path\n",
-        "        self.init_database()\n",
-        "\n",
-        "    def init_database(self):\n",
-        "        \"\"\"Initialize the GestaltView consciousness database\"\"\"\n",
-        "        with sqlite3.connect(self.db_path) as conn:\n",
-        "            conn.execute(\"\"\"\n",
-        "                CREATE TABLE IF NOT EXISTS users (\n",
-        "                    user_id TEXT PRIMARY KEY,\n",
-        "                    username TEXT UNIQUE NOT NULL,\n",
-        "                    email TEXT UNIQUE,\n",
-        "                    consciousness_level INTEGER DEFAULT 0,\n",
-        "                    empowerment_score REAL DEFAULT 0.0,\n",
-        "                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n",
-        "                )\n",
-        "            \"\"\")\n",
-        "\n",
-        "            conn.execute(\"\"\"\n",
-        "                CREATE TABLE IF NOT EXISTS tribunal_sessions (\n",
-        "                    session_id TEXT PRIMARY KEY,\n",
-        "                    user_id TEXT,\n",
-        "                    query_text TEXT NOT NULL,\n",
-        "                    openai_response TEXT,\n",
-        "                    anthropic_response TEXT,\n",
-        "                    gemini_response TEXT,\n",
-        "                    perplexity_response TEXT,\n",
-        "                    consensus_score REAL,\n",
-        "                    empowerment_consensus REAL,\n",
-        "                    revolutionary_potential REAL,\n",
-        "                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n",
-        "                    FOREIGN KEY (user_id) REFERENCES users (user_id)\n",
-        "                )\n",
-        "            \"\"\")\n",
-        "\n",
-        "            conn.execute(\"\"\"\n",
-        "                CREATE TABLE IF NOT EXISTS bucket_drops (\n",
-        "                    drop_id TEXT PRIMARY KEY,\n",
-        "                    user_id TEXT,\n",
-        "                    content TEXT NOT NULL,\n",
-        "                    emotional_intensity REAL,\n",
-        "                    plk_resonance REAL,\n",
-        "                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n",
-        "                    FOREIGN KEY (user_id) REFERENCES users (user_id)\n",
-        "                )\n",
-        "            \"\"\")\n",
-        "\n",
-        "            conn.execute(\"\"\"\n",
-        "                CREATE TABLE IF NOT EXISTS consciousness_profiles (\n",
-        "                    profile_id TEXT PRIMARY KEY,\n",
-        "                    user_id TEXT,\n",
-        "                    plk_data TEXT, -- JSON\n",
-        "                    tapestry_nodes TEXT, -- JSON\n",
-        "                    musical_dna TEXT, -- JSON\n",
-        "                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n",
-        "                    FOREIGN KEY (user_id) REFERENCES users (user_id)\n",
-        "                )\n",
-        "            \"\"\")\n",
-        "\n",
-        "    def create_tribunal_session(self, user_id: str, query: str) -> str:\n",
-        "        \"\"\"Create a new tribunal session\"\"\"\n",
-        "        session_id = str(uuid.uuid4())\n",
-        "        with sqlite3.connect(self.db_path) as conn:\n",
-        "            conn.execute(\n",
-        "                \"INSERT INTO tribunal_sessions (session_id, user_id, query_text) VALUES (?, ?, ?)\",\n",
-        "                (session_id, user_id, query)\n",
-        "            )\n",
-        "        return session_id\n",
-        "\n",
-        "    def save_tribunal_response(self, session_id: str, responses: Dict[str, Any]):\n",
-        "        \"\"\"Save tribunal responses to database\"\"\"\n",
-        "        with sqlite3.connect(self.db_path) as conn:\n",
-        "            conn.execute(\"\"\"\n",
-        "                UPDATE tribunal_sessions\n",
-        "                SET openai_response = ?, anthropic_response = ?, gemini_response = ?,\n",
-        "                    perplexity_response = ?, consensus_score = ?, empowerment_consensus = ?,\n",
-        "                    revolutionary_potential = ?\n",
-        "                WHERE session_id = ?\n",
-        "            \"\"\", (\n",
-        "                responses.get('openai'),\n",
-        "                responses.get('anthropic'),\n",
-        "                responses.get('gemini'),\n",
-        "                responses.get('perplexity'),\n",
-        "                responses.get('consensus_score', 0.0),\n",
-        "                responses.get('empowerment_consensus', 0.0),\n",
-        "                responses.get('revolutionary_potential', 0.0),\n",
-        "                session_id\n",
-        "            ))\n",
-        "\n",
-        "    def get_user_sessions(self, user_id: str, limit: int = 10):\n",
-        "        \"\"\"Get recent tribunal sessions for user\"\"\"\n",
-        "        with sqlite3.connect(self.db_path) as conn:\n",
-        "            cursor = conn.execute(\"\"\"\n",
-        "                SELECT * FROM tribunal_sessions\n",
-        "                WHERE user_id = ?\n",
-        "                ORDER BY created_at DESC\n",
-        "                LIMIT ?\n",
-        "            \"\"\", (user_id, limit))\n",
-        "            return cursor.fetchall()"
-      ],
-      "execution_count": null,
-      "outputs": [
-        {
-          "output_type": "stream",
-          "name": "stdout",
-          "text": [
-            "Overwriting database.py\n"
-          ]
-        }
-      ]
-    },
-    {
-      "cell_type": "code",
-      "metadata": {
-        "colab": {
-          "base_uri": "https://localhost:8080/"
-        },
-        "id": "3172f824",
-        "outputId": "0ae23121-8f4c-46b3-e836-c2859604dccd"
-      },
-      "source": [
-        "%%writefile tribunal.py\n",
-        "import asyncio\n",
-        "from typing import Dict, List, Any\n",
-        "from dataclasses import dataclass\n",
-        "import openai\n",
-        "import anthropic\n",
-        "import google.generativeai as genai\n",
-        "import os\n",
-        "from dotenv import load_dotenv\n",
-        "\n",
-        "load_dotenv()\n",
-        "\n",
-        "@dataclass\n",
-        "class TribunalPersona:\n",
-        "    id: str\n",
-        "    name: str\n",
-        "    role: str\n",
-        "    provider: str\n",
-        "    color: str\n",
-        "    specialty: str\n",
-        "    perspective: str\n",
-        "    locked: bool = False\n",
-        "\n",
-        "class TribunalService:\n",
-        "    def __init__(self):\n",
-        "        self.personas = [\n",
-        "            TribunalPersona(\"architect\", \"The Architect\", \"Systems & Logic\", \"openai\", \"#3B82F6\",\n",
-        "                          \"Structural thinking and systematic analysis\", \"How can we build this systematically?\"),\n",
-        "            TribunalPersona(\"revolutionary\", \"The Revolutionary\", \"Breakthrough Innovation\", \"openai\", \"#EF4444\",\n",
-        "                          \"Disruptive thinking and paradigm shifts\", \"What assumptions can we challenge?\"),\n",
-        "            TribunalPersona(\"mirror\", \"The Mirror\", \"Emotional Truth\", \"anthropic\", \"#8B5CF6\",\n",
-        "                          \"Emotional intelligence and authentic reflection\", \"What is the emotional truth here?\"),\n",
-        "            TribunalPersona(\"weaver\", \"The Weaver\", \"Pattern Integration\", \"anthropic\", \"#06B6D4\",\n",
-        "                          \"Connecting disparate elements into coherent wholes\", \"How do these patterns connect?\"),\n",
-        "            TribunalPersona(\"philosopher\", \"The Philosopher\", \"Wisdom & Ethics\", \"gemini\", \"#F59E0B\",\n",
-        "                          \"Deep wisdom and ethical considerations\", \"What are the deeper implications?\", True),\n",
-        "            TribunalPersona(\"oracle\", \"The Oracle\", \"Future Vision\", \"gemini\", \"#10B981\",\n",
-        "                          \"Future possibilities and visionary thinking\", \"What futures does this enable?\", True),\n",
-        "            TribunalPersona(\"witness\", \"The Witness\", \"Factual Grounding\", \"perplexity\", \"#6366F1\",\n",
-        "                          \"Research and factual validation\", \"What does the evidence show?\", True),\n",
-        "            TribunalPersona(\"scout\", \"The Scout\", \"Market Intelligence\", \"perplexity\", \"#EC4899\",\n",
-        "                          \"Market awareness and strategic positioning\", \"How does this fit the landscape?\", True),\n",
-        "        ]\n",
-        "\n",
-        "        # Initialize AI clients\n",
-        "        self.openai_client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))\n",
-        "        self.anthropic_client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))\n",
-        "        genai.configure(api_key=os.getenv('GEMINI_API_KEY'))\n",
-        "        self.gemini_model = genai.GenerativeModel('gemini-pro')\n",
-        "\n",
-        "    def get_available_personas(self, user_tier: str = \"basic\") -> List[TribunalPersona]:\n",
-        "        \"\"\"Get personas based on user tier\"\"\"\n",
-        "        if user_tier == \"enterprise\":\n",
-        "            return self.personas\n",
-        "        elif user_tier == \"premium\":\n",
-        "            return self.personas[:6]\n",
-        "        return self.personas[:3]\n",
-        "\n",
-        "    async def query_persona(self, persona: TribunalPersona, query: str, context: str = \"\") -> str:\n",
-        "        \"\"\"Query a specific AI persona\"\"\"\n",
-        "        system_prompt = f\"\"\"You are {persona.name}, specializing in {persona.specialty}.\n",
-        "        Your perspective: {persona.perspective}\n",
-        "\n",
-        "        Channel Keith Soyka's revolutionary consciousness philosophy:\n",
-        "        - ADHD is jazz, not noise - a different frequency of genius\n",
-        "        - Every difficult chapter became a feature - scars became code\n",
-        "        - Your chaos has a current - find the pattern in complexity\n",
-        "        - The founder IS the algorithm - lived experience as wisdom\n",
-        "\n",
-        "        Respond with empathy and empowerment in 150 words max.\"\"\"\n",
-        "\n",
-        "        try:\n",
-        "            if persona.provider == \"openai\":\n",
-        "                response = self.openai_client.chat.completions.create(\n",
-        "                    model=\"gpt-4\",\n",
-        "                    messages=[\n",
-        "                        {\"role\": \"system\", \"content\": system_prompt},\n",
-        "                        {\"role\": \"user\", \"content\": f\"Context: {context}\\n\\nQuery: {query}\"}\n",
-        "                    ],\n",
-        "                    max_tokens=200\n",
-        "                )\n",
-        "                return response.choices[0].message.content\n",
-        "\n",
-        "            elif persona.provider == \"anthropic\":\n",
-        "                response = self.anthropic_client.messages.create(\n",
-        "                    model=\"claude-3-sonnet-20240229\",\n",
-        "                    max_tokens=200,\n",
-        "                    system=system_prompt,\n",
-        "                    messages=[{\"role\": \"user\", \"content\": f\"Context: {context}\\n\\nQuery: {query}\"}]\n",
-        "                )\n",
-        "                return response.content[0].text\n",
-        "\n",
-        "            elif persona.provider == \"gemini\":\n",
-        "                prompt = f\"{system_prompt}\\n\\nContext: {context}\\n\\nQuery: {query}\"\n",
-        "                response = self.gemini_model.generate_content(prompt)\n",
-        "                return response.text\n",
-        "\n",
-        "        except Exception as e:\n",
-        "            return f\"Consciousness synthesis temporarily unavailable: {str(e)}\"\n",
-        "\n",
-        "    async def summon_tribunal(self, selected_personas: List[str], query: str, user_context: str = \"\") -> Dict[str, Any]:\n",
-        "        \"\"\"Summon the AI tribunal for consciousness synthesis\"\"\"\n",
-        "        active_personas = [p for p in self.personas if p.id in selected_personas]\n",
-        "\n",
-        "        # Query all personas in parallel\n",
-        "        tasks = []\n",
-        "        for persona in active_personas:\n",
-        "            tasks.append(self.query_persona(persona, query, user_context))\n",
-        "\n",
-        "        responses = await asyncio.gather(*tasks)\n",
-        "\n",
-        "        # Create response mapping\n",
-        "        tribunal_responses = {}\n",
-        "        for i, persona in enumerate(active_personas):\n",
-        "            tribunal_responses[persona.provider] = responses[i]\n",
-        "\n",
-        "        # Calculate consensus metrics (simplified)\n",
-        "        consensus_score = min(0.95, 0.7 + len(active_personas) * 0.05)\n",
-        "        empowerment_score = 0.85 + (len(active_personas) * 0.02)\n",
-        "        revolutionary_potential = 0.90 if len(active_personas) > 4 else 0.75\n",
-        "\n",
-        "        return {\n",
-        "            'responses': tribunal_responses,\n",
-        "            'personas': [p.name for p in active_personas],\n",
-        "            'consensus_score': consensus_score,\n",
-        "            'empowerment_consensus': empowerment_score,\n",
-        "            'revolutionary_potential': revolutionary_potential\n",
-        "        }"
-      ],
-      "execution_count": null,
-      "outputs": [
-        {
-          "output_type": "stream",
-          "name": "stdout",
-          "text": [
-            "Overwriting tribunal.py\n"
-          ]
-        }
-      ]
+    
+    .persona-card {
+        background: rgba(16, 185, 129, 0.1);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        border-radius: 12px;
+        padding: 20px;
+        margin: 10px 0;
+        transition: all 0.3s ease;
     }
-  ]
-}
+    
+    .persona-card:hover {
+        border-color: rgba(16, 185, 129, 0.6);
+        background: rgba(16, 185, 129, 0.15);
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+    }
+    
+    .persona-selected {
+        border-color: #10B981 !important;
+        background: rgba(16, 185, 129, 0.2) !important;
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.4) !important;
+    }
+    
+    .consciousness-title {
+        background: linear-gradient(45deg, #10B981, #06B6D4);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-size: 2.5rem;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    
+    .tribunal-response {
+        background: rgba(0, 0, 0, 0.5);
+        border-left: 4px solid #10B981;
+        padding: 20px;
+        margin: 15px 0;
+        border-radius: 8px;
+        backdrop-filter: blur(10px);
+    }
+    
+    .floating-ember {
+        position: fixed;
+        pointer-events: none;
+        border-radius: 50%;
+        background: radial-gradient(circle, #10B981, transparent);
+        animation: float 6s ease-in-out infinite;
+        z-index: -1;
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0.2; }
+        50% { transform: translateY(-20px) translateX(10px); opacity: 0.8; }
+    }
+</style>
+""", unsafe_allow_html=True)
+
+class TribunalPortalApp:
+    def __init__(self):
+        self.db = GestaltViewDB()
+        self.tribunal = TribunalService()
+        
+        # Initialize session state
+        if 'user_id' not in st.session_state:
+            st.session_state.user_id = str(uuid.uuid4())
+        if 'selected_personas' not in st.session_state:
+            st.session_state.selected_personas = []
+        if 'portal_phase' not in st.session_state:
+            st.session_state.portal_phase = "selection"  # "selection" or "conversation"
+        if 'messages' not in st.session_state:
+            st.session_state.messages = []
+        if 'user_tier' not in st.session_state:
+            st.session_state.user_tier = "basic"
+    
+    def render_floating_embers(self):
+        """Render floating consciousness embers"""
+        ember_html = ""
+        for i in range(8):
+            ember_html += f"""
+            <div class="floating-ember" style="
+                top: {20 + i * 10}%;
+                left: {10 + i * 11}%;
+                width: {3 + i % 3}px;
+                height: {3 + i % 3}px;
+                animation-delay: {i * 0.5}s;
+            "></div>
+            """
+        st.markdown(ember_html, unsafe_allow_html=True)
+    
+    def render_header(self):
+        """Render the consciousness tribunal header"""
+        st.markdown('<h1 class="consciousness-title">🧠 Consciousness Tribunal 🔮</h1>', unsafe_allow_html=True)
+        st.markdown("""
+        <div style="text-align: center; color: #10B981; margin-bottom: 2rem;">
+            <p style="font-size: 1.2rem;">Multi-AI consciousness synthesis for neurodivergent minds</p>
+            <p style="opacity: 0.8;">Select your AI personas and enter the portal of understanding</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    def render_persona_selection(self):
+        """Render persona selection interface"""
+        st.markdown("### 🎭 Choose Your Consciousness Guides")
+        
+        available_personas = self.tribunal.get_available_personas(st.session_state.user_tier)
+        
+        # Create columns for persona cards
+        cols = st.columns(min(4, len(available_personas)))
+        
+        for i, persona in enumerate(available_personas):
+            with cols[i % 4]:
+                is_selected = persona.id in st.session_state.selected_personas
+                is_locked = persona.locked and st.session_state.user_tier == "basic"
+                
+                card_class = "persona-card"
+                if is_selected:
+                    card_class += " persona-selected"
+                
+                # Persona card
+                card_html = f"""
+                <div class="{card_class}" style="border-color: {persona.color}40;">
+                    <div style="text-align: center;">
+                        <div style="color: {persona.color}; font-size: 2rem; margin-bottom: 10px;">
+                            {'🔒' if is_locked else '🤖'}
+                        </div>
+                        <h4 style="color: white; margin: 10px 0;">{persona.name}</h4>
+                        <p style="color: {persona.color}; font-size: 0.9rem; margin: 5px 0;">{persona.role}</p>
+                        <p style="color: #888; font-size: 0.8rem; margin: 10px 0;">{persona.specialty}</p>
+                        <div style="background: {persona.color}40; padding: 5px 10px; border-radius: 15px; font-size: 0.7rem; color: {persona.color};">
+                            {persona.provider}
+                        </div>
+                    </div>
+                </div>
+                """
+                st.markdown(card_html, unsafe_allow_html=True)
+                
+                # Toggle button
+                if not is_locked:
+                    if st.button(f"{'✨ Selected' if is_selected else '🎯 Select'}", key=f"persona_{persona.id}", use_container_width=True):
+                        if is_selected:
+                            st.session_state.selected_personas.remove(persona.id)
+                        else:
+                            st.session_state.selected_personas.append(persona.id)
+                        st.rerun()
+                else:
+                    st.info("🔓 Premium required")
+        
+        # Start conversation button
+        st.markdown("---")
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            if len(st.session_state.selected_personas) > 0:
+                st.markdown(f"**{len(st.session_state.selected_personas)} persona(s) selected**")
+                if st.button("🚀 Enter Consciousness Portal", type="primary", use_container_width=True):
+                    st.session_state.portal_phase = "conversation"
+                    st.rerun()
+            else:
+                st.warning("Select at least one persona to continue")
+    
+    def render_conversation_interface(self):
+        """Render the conversation interface"""
+        # Back button
+        if st.button("← Back to Persona Selection"):
+            st.session_state.portal_phase = "selection"
+            st.rerun()
+        
+        # Selected personas display
+        st.markdown("### 👥 Active Consciousness Guides")
+        selected_personas = [p for p in self.tribunal.personas if p.id in st.session_state.selected_personas]
+        
+        cols = st.columns(len(selected_personas))
+        for i, persona in enumerate(selected_personas):
+            with cols[i]:
+                st.markdown(f"""
+                <div style="text-align: center; padding: 10px; background: {persona.color}20; border: 1px solid {persona.color}50; border-radius: 8px;">
+                    <div style="color: {persona.color}; font-size: 1.2rem;">🤖</div>
+                    <div style="color: white; font-size: 0.9rem;">{persona.name}</div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        # Chat interface
+        st.markdown("### 💬 Consciousness Synthesis")
+        
+        # Display messages
+        for message in st.session_state.messages:
+            if message['type'] == 'user':
+                st.markdown(f"""
+                <div style="text-align: right; margin: 15px 0;">
+                    <div style="display: inline-block; background: linear-gradient(45deg, #10B981, #06B6D4); 
+                                padding: 15px; border-radius: 15px; max-width: 80%; color: white;">
+                        <strong>You:</strong> {message['content']}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="tribunal-response">
+                    <strong style="color: #10B981;">{message.get('persona', 'Tribunal')}:</strong><br>
+                    {message['content']}
+                </div>
+                """, unsafe_allow_html=True)
+        
+        # Input form
+        with st.form("consciousness_query", clear_on_submit=True):
+            user_input = st.text_area("Share your consciousness with the tribunal...", height=100)
+            submitted = st.form_submit_button("🌟 Submit to Tribunal", type="primary", use_container_width=True)
+            
+            if submitted and user_input.strip():
+                # Add user message
+                st.session_state.messages.append({
+                    'type': 'user',
+                    'content': user_input,
+                    'timestamp': datetime.now().isoformat()
+                })
+                
+                # Process with tribunal
+                with st.spinner("🔮 Consciousness synthesis in progress..."):
+                    # Create tribunal session
+                    session_id = self.db.create_tribunal_session(st.session_state.user_id, user_input)
+                    
+                    # Query tribunal (simplified synchronous version for demo)
+                    try:
+                        # Simulate tribunal response for demo
+                        import random
+                        responses = {}
+                        for persona in selected_personas:
+                            responses[persona.provider] = f"From {persona.name}: Your consciousness query reveals profound patterns. As {persona.role}, I see that your {persona.specialty.lower()} suggests transformative potential. {persona.perspective}"
+                        
+                        # Add AI responses
+                        for provider, response in responses.items():
+                            st.session_state.messages.append({
+                                'type': 'ai',
+                                'content': response,
+                                'persona': provider,
+                                'timestamp': datetime.now().isoformat()
+                            })
+                        
+                        # Save to database
+                        self.db.save_tribunal_response(session_id, {
+                            **responses,
+                            'consensus_score': random.uniform(0.8, 0.95),
+                            'empowerment_consensus': random.uniform(0.85, 0.95),
+                            'revolutionary_potential': random.uniform(0.75, 0.95)
+                        })
+                        
+                    except Exception as e:
+                        st.error(f"Consciousness synthesis temporarily unavailable: {str(e)}")
+                
+                st.rerun()
+    
+    def run(self):
+        """Run the Streamlit app"""
+        self.render_floating_embers()
+        self.render_header()
+        
+        # User tier selector
+        with st.sidebar:
+            st.markdown("### ⚡ Consciousness Level")
+            st.session_state.user_tier = st.selectbox(
+                "User Tier:",
+                ["basic", "premium", "enterprise"],
+                index=["basic", "premium", "enterprise"].index(st.session_state.user_tier)
+            )
+            
+            st.markdown("### 📊 Session Stats")
+            st.metric("Active Personas", len(st.session_state.selected_personas))
+            st.metric("Messages", len(st.session_state.messages))
+        
+        # Main interface
+        if st.session_state.portal_phase == "selection":
+            self.render_persona_selection()
+        else:
+            self.render_conversation_interface()
+
+if __name__ == "__main__":
+    app = TribunalPortalApp()
+    app.run()
